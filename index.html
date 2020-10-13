@@ -15,7 +15,7 @@
 </head>
 
 <body>
-  <main class="main">
+  <div class="main">
     <div id="banner" class="everpresent-content">
       <h1 class="everpresent-content__heading">Wallet</h1>
       <p id="intro" class="everpresent-content__subheading">
@@ -26,14 +26,14 @@
           Welcome to Your Personal Finance Dashboard!
         </p>
         <br>
-        <div class=buttons>
-          <div class=floated>
+        <div class="col-lg-12">
+          <div class="pull-center">
             <button type="button" class="button button--is-small button--is-default button--is-half-width"
               id="clear-button" onclick="clear_accounts();">
               Clear Dashboard
             </button>
           </div>
-
+          
         </div>
       </div>
     </div>
@@ -53,7 +53,7 @@
       <button id="link-btn" class="button button--is-primary" disabled>Connect with Plaid</button>
       <div class="loading-indicator"></div>
     </div>
-  </main>
+  </div>
 
   <div id="app" class="container-fluid">
     <div class="row">
@@ -85,6 +85,7 @@
         }
         localStorage.setItem('link_token', data.link_token);
         handler = Plaid.create({
+          clientName: "Wallet",
           token: data.body.link_token,
           onSuccess: function (public_token) {
             $.get('https://walletapi.yjain.net/v1/create-access-token', { public_token: public_token },
