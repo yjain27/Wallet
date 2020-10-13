@@ -6,7 +6,7 @@ http://www.wallet.yjain.net/
 
 This repo contains the frontend and backend code for Wallet. Wallet is a personal finance management application that provides the user with a dashboard containing their account information. Wallet allows users to monitor and budget their personal finances.
 
-**AWS Architecture **
+** AWS Architecture **
 
 ![](awsarchitecture.PNG)
 
