@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Wallet</title>
+  <link rel="stylesheet" href="https://threads.plaid.com/threads.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <link rel="stylesheet" type="text/css" href="./static/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+  <main class="main">
+    <div id="banner" class="everpresent-content">
+      <h1 class="everpresent-content__heading">Wallet</h1>
+      <p id="intro" class="everpresent-content__subheading">
+        A personal finance and budgetting application powered by Plaid's API
+      </p>
+      <div id=welcome>
+        <p class="everpresent-content__subheading">
+          Welcome to Your Personal Finance Dashboard!
+        </p>
+        <br>
+        <div class=buttons>
+          <div class=floated>
+            <button type="button" class="button button--is-small button--is-default button--is-half-width"
+              id="clear-button" onclick="clear_accounts();">
+              Clear Dashboard
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div id="container" class="initial-view">
+      <p class="initial-view__description2">
+        Currently, this application only supports a demo account:
+        <br>
+        USER: user_good
+        <br>
+        PASSWORD: pass_good
+      </p>
+      <p class="initial-view__description1">
+        Click the button below to open a list of Institutions. After you select one, you’ll be guided through an
+        authentication process.
+      </p>
+      <button id="link-btn" class="button button--is-primary" disabled>Connect with Plaid</button>
+      <div class="loading-indicator"></div>
+    </div>
+  </main>
+
+  <div id="app" class="container-fluid">
+    <div class="row">
+      <div class="col-lg-3" style="text-align: center;">
+        <div id=accounts></div>
+      </div>
+      <div class="col-lg-6" style="text-align: center;">
+        <div id=graphs></div>
+        <div id=chart></div>
+      </div>
+      <div class="col-lg-3" style="text-align: center;">
+        <div id=transactions></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.min.js"></script>
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+  <script>
+
+    function render_page($) {
+
+      var handler = null;
+      $.get('https://walletapi.yjain.net/v1/create-link-token', {}, function (data) {
+        if (data.error != null) {
+          $('.loading-indicator').hide();
+          displayError($('#container'), data.error);
+          return;
+        }
+        localStorage.setItem('link_token', data.link_token);
+        handler = Plaid.create({
+          token: data.body.link_token,
+          onSuccess: function (public_token) {
+            $.get('https://walletapi.yjain.net/v1/create-access-token', { public_token: public_token },
+              function (data) {
+                access_token = data.access_token
+                document.cookie = "access_token=" + access_token
+                update_page(jQuery, access_token)
+                $('#container').fadeOut('fast', function () {
+                  $('#intro').hide();
+                  $('#app, #welcome').fadeIn('slow');
+                });
+              });
+          },
+        });
+        $('#link-btn').attr('disabled', false);
+        $('.loading-indicator').hide();
+      });
+
+      $('#link-btn').on('click', function (e) {
+        if (handler != null) {
+          handler.open();
+
+        }
+      });
+
+    }
+
+    function update_page($, access_token) {
+      $.get('https://walletapi.yjain.net/v1/get-financial-info', { access_token: access_token }, function (data) {
+        add_account_section(data["Accounts"])
+        add_transaction_section(data["Transactions"])
+        add_chart_section(data["MonthlySpending"])
+      });
+
+    }
+
+    function add_account_section(account_data) {
+      header = `
+              <h3 class="card-title">Accounts</h3>
+              <p class="card-subtitle mb-2 text-muted">A brief overview of all your accounts</p>
+              <br/>
+            `
+      networth = 0;
+      for (var key in account_data) {
+        networth += account_data[key]["total"]
+      }
+      networth_data = ` 
+              <div class="networth">
+                  <a class="btn btn-light btn-block card-text" data-toggle="collapse" href="#networth" role="button" aria-expanded="false" aria-controls="networth">
+                      <div class="row">
+                          <div class="col"><p class="card-text" style="text-align: left">Networth</p></div>
+                          <div class="col"><p class="card-text"style="text-align: right">${formatter.format(networth)}</p></div>
+                      </div>
+                  </a>
+                  <div class="collapse" id="networth">
+                      <div class="card-body">
+                        <div class="row">
+                          <div class="col"><p class="card-text" style="text-align: left">Cash</p></div>  
+                          <div class="col"><p class="card-text"style="text-align: right">${formatter.format(account_data['depository']['total'])}</p></div>
+                        </div>
+                        <div class="row">
+                          <div class="col"><p class="card-text" style="text-align: left">Credit Card</p></div>  
+                          <div class="col"><p class="card-text"style="text-align: right">${formatter.format(account_data['credit']['total'])}</p></div>
+                        </div>
+                        <div class="row">
+                          <div class="col"><p class="card-text" style="text-align: left">Investment</p></div>  
+                          <div class="col"><p class="card-text"style="text-align: right">${formatter.format(account_data['investment']['total'])}</p></div>
+                        </div>                        
+                        <div class="row">
+                          <div class="col"><p class="card-text" style="text-align: left">Loan</p></div>  
+                          <div class="col"><p class="card-text"style="text-align: right">${formatter.format(account_data['loan']['total'])}</p></div>
+                        </div>
+                      </div>
+                  </div>
+              </div>
+              <br/>
+            `
+      cash_data = createAccountCard(account_data['depository'], "Cash")
+      credit_card = createAccountCard(account_data['credit'], "Credit")
+      investment_data = createAccountCard(account_data['investment'], "Investment")
+      loan_data = createAccountCard(account_data['loan'], "Loan")
+
+      data = header + networth_data + cash_data + credit_card + investment_data + loan_data
+
+      appendData(data, 'accounts')
+    }
+    function add_transaction_section(transaction_data) {
+
+      list = `
+              <h3 class="card-title">Transactions</h3>
+              <p class="card-subtitle mb-2 text-muted" >Your recent transactions</p>
+            `
+      list = list + '<div class="card-body">'
+
+      for (i = 0; i < transaction_data.length; i++) {
+        current = transaction_data[i]
+        template = `
+                  <div class = "btn btn-light btn-block card-text" >
+                    <div class="row">
+                      <div class="col"><p class="card-text" style="text-align: left">${current["name"]}</p></div>  
+                      <div class="col"><p class="card-text"style="text-align: right">${formatter.format(-1 * current["amount"])}</p></div>
+                    </div>
+                    <div class="row">
+                      <div class="col"><p class="card-text" style="text-align: left">${current["date"]}</p></div>  
+                      <div class="col"><p class="card-text"style="text-align: right">${current["accountname"]}</p></div> 
+                    </div>
+                  </div>
+                `
+        list = list + template
+      }
+      list = list + '</div>'
+      appendData(list, 'transactions')
+
+    }
+
+    function add_chart_section(data) {
+
+      dates = Object.keys(data)
+      prices = Object.values(data)
+
+      for (i = 0; i < prices.length; i++) {
+        current = prices[i]
+        formatted_val = current.toFixed(2)
+        prices[i] = formatted_val
+      }
+
+      var options = {
+        chart: {
+          type: 'line',
+          fontFamily: 'Avenir Next',
+          foreColor: '#373d3f'
+        },
+        stroke: {
+          curve: 'smooth',
+          width: 1
+        },
+        series: [{
+          name: "Spending",
+          data: prices
+        }],
+        xaxis: {
+          categories: dates,
+          type: 'datetime'
+        },
+        yaxis: {
+          labels: {
+            formatter: function (value) {
+              return "$" + formatter_value.format(value);
+            }
+          },
+        },
+      }
+      var chart = new ApexCharts(document.querySelector("#chart"), options);
+
+      chart.render();
+
+      template = `
+              <h3 class="card-title">Spending</h3>
+              <p class="card-subtitle mb-2 text-muted" >Your spending in the last 30 days</p>
+            `
+      appendData(template, 'graphs')
+    }
+
+    function createAccountCard(data, id) {
+
+      template = `
+      <div class="${id}">
+          <a class="btn btn-light btn-block card-text" data-toggle="collapse" href="#${id}" role="button" aria-expanded="false" aria-controls="${id}">
+              <div class="row">
+                  <div class="col"><p class="card-text" style="text-align: left">${id}</p></div>
+                  <div class="col"><p class="card-text"style="text-align: right">${formatter.format(data['total'])}</p></div>
+              </div>
+          </a>
+          <div class="collapse" id="${id}">
+              <div class="card-body">
+                  ${createAccountsList(data["AccountList"])}
+              </div>
+          </div>
+      </div>
+      <br/>
+      `
+
+      return template
+    }
+
+    function createAccountsList(data) {
+      list = ' '
+      for (i = 0; i < data.length; i++) {
+        const acct = data[i]
+        template = `
+                    <div class="row">
+                        <div class="col"><p class="card-text" style="text-align: left">${acct.name}</p></div>  
+                        <div class="col"><p class="card-text"style="text-align: right">${formatter.format(acct.balances.current)}</p></div>
+                    </div>
+                    `
+        list = list + template
+      }
+      return list
+    }
+
+    function clear_accounts() {
+      cookies = document.cookie.split(";");
+      for (i = 0; i < cookies.length; i++) {
+        cookie = cookies[i];
+        eqPos = cookie.indexOf("=");
+        name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      }
+      // deletes just access_tokens
+      // document.cookie = "access_token=[]"
+      location.reload();
+    }
+
+    function appendData(data, id) {
+      var mainContainer = document.getElementById(id);
+      var div = document.createElement("div");
+      div.innerHTML = data
+      mainContainer.appendChild(div);
+    }
+
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    })
+
+    const formatter_value = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2
+    })
+
+    cookies = document.cookie
+      .split(';')
+      .map(cookie => cookie.split('='))
+      .reduce((accumulator, [key, value]) =>
+        ({ ...accumulator, [key.trim()]: decodeURIComponent(value) }),
+        {})
+
+    if (cookies.access_token) {
+      update_page(jQuery, cookies.access_token)
+      $('#container').fadeOut('fast', function () {
+
+        document.getElementById('intro').style.display = "none";
+        document.getElementById('welcome').style.display = "block";
+        document.getElementById('app').style.display = "block";
+
+      });
+    } else {
+      render_page(jQuery);
+    }
+
+  </script>
+</body>
+
+</html>

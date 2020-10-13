@@ -1,0 +1,47 @@
+body {
+  background: #ffffff;
+}
+
+.main {
+  margin-right: auto;
+  margin-left: auto;
+  padding: 40px 40px;
+}
+
+.everpresent-content {
+  border-bottom-width: 1px;
+  border-bottom-color: #E3E9EF;
+  border-bottom-style: solid;
+  margin-bottom: 16px;
+  padding-bottom: 60px;
+  text-align: center;
+}
+
+.everpresent-content__heading {
+  margin-bottom: 16px;
+}
+
+.everpresent-content__subheading {
+  font-size: 24px;
+  font-weight: 300;
+  color: #527084;
+  line-height: 32px;
+  margin-bottom: 0;
+}
+
+#app {
+  display: none;
+}
+
+#welcome {
+  display: none;
+}
+
+.floated {
+  float:left;
+  margin-right:5px;
+}
+.buttons {
+  margin-left: auto;
+  margin-right: auto;
+}
