@@ -20,4 +20,4 @@ Password: pass_good
 ## Demo
 
 A visualization of the dashboard itself, displaying a dummy account
-![](demo.png)
+![](demo.PNG)
